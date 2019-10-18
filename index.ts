@@ -1,6 +1,7 @@
 const express=require('express');
-import {Entity, PrimaryGeneratedColumn, Column, PrimaryColumn, createConnection, ConnectionManager, Connection, getConnection} from "typeorm";
+import {Entity, PrimaryGeneratedColumn, Column, PrimaryColumn, createConnection, ConnectionManager, Connection, getConnection, BaseEntity} from "typeorm";
 import mysql from 'mysql';
+
 import "reflect-metadata";
 const app=express();
  const port=4000;
@@ -11,7 +12,7 @@ const app=express();
 
 
  @Entity()
- class NewMember{
+ class NewMember extends BaseEntity{
   @PrimaryColumn()
      id:number;
      @Column()
@@ -21,6 +22,7 @@ const app=express();
      @Column()
      committe:string;
      constructor(id:number,name:string,phone:number,committe:string){
+       super();
          this.id=id;
          this.name=name;
          this.phone=phone;
@@ -65,8 +67,10 @@ const members:NewMember[]=[member1,member2,member3];
   
     if (found) {
       res.json(members.filter(member => member.id === parseInt(req.params.id)));
-      await connection.manager.save(members).then(con=>{
+     const temp= await connection.manager.find(NewMember);
+      await connection.manager.save(temp).then(con=>{
         console.log(con);
+       
       }
       )
   
@@ -82,11 +86,20 @@ const members:NewMember[]=[member1,member2,member3];
     const Member =new NewMember(req.body.id,req.body.name,req.body.phone,req.body.committe);
  
     members.push(Member);
+   await NewMember.create({
+     id:req.body.id,
+     name:req.body.name,
+     phone:req.body.phone,
+     committe:req.body.phone
+   }).save();
     res.json(members);
-    await connection.manager.save(members).then(con=>{
+    const temp= await connection.manager.find(NewMember);
+    await connection.manager.save(temp).then(con=>{
       console.log(con);
+     
     }
     )
+
 
   });
 
@@ -104,12 +117,13 @@ const members:NewMember[]=[member1,member2,member3];
           member.phone = updMember.phone ? updMember.phone : member.phone;
           member.committe = updMember.committe ? updMember.committe : member.committe;
           res.json({ msg: 'Member updated', member });
-          await connection.manager.save(members).then(con=>{
-            console.log(con);
-          }
-          )
+        
         }
-      
+        const temp= await connection.manager.find(NewMember);
+        await connection.manager.save(temp).then(con=>{
+          console.log(con);
+        }
+        )
       });
     } else {
       res.status(400).json({ msg: `No member with the id of ${req.params.id}` });
@@ -118,20 +132,23 @@ const members:NewMember[]=[member1,member2,member3];
 
   app.delete('/member/:id', async (req:any, res:any) => {
     let i;
-    const {id} = req.params;
+    const {id}= req.params;
     for(i=0; i<members.length; i++){
         if(members[i].id==id)
         break;
     }
     members.splice(i,1); 
-    connection.manager.query(`DELETE FROM  test.new_member
-    WHERE id = ${i}`)
-    await connection.manager.save(members).then(con=>{
-      console.log(con);
-    }
-    )
+   
+
+    await NewMember.delete({id:id});
         res.send("The Member Is Removed Succecfully"); 
  
+        const temp= await connection.manager.find(NewMember);
+        await connection.manager.save(temp).then(con=>{
+          console.log(con);
+         
+        }
+        )
       }
   )
  
@@ -139,4 +156,3 @@ const members:NewMember[]=[member1,member2,member3];
   app.listen(port,()=>{
       console.log(`Server Running on  ${port}`)
   })
-
